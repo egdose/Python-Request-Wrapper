@@ -1,5 +1,5 @@
 """
-RequestWrapper - A professional HTTP request wrapper with retry logic, caching, and proxy support.
+RequestWrapper - A HTTP request wrapper with retry logic, caching, and proxy support.
 
 This package provides a comprehensive HTTP client that includes:
 - Configurable retry logic for failed requests

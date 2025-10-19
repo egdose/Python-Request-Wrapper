@@ -142,7 +142,7 @@ def configure_logging(
 
 class RequestWrapper:
     """
-    Professional HTTP request wrapper with retry logic, caching, and proxy support.
+    HTTP request wrapper with retry logic, caching, and proxy support.
 
     This class provides a high-level interface for making HTTP requests with
     built-in retry mechanisms, caching capabilities, and proxy rotation.

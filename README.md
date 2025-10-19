@@ -1,6 +1,6 @@
 # RequestWrapper
 
-A professional Python HTTP request wrapper with retry logic, caching, and proxy support.
+A Python HTTP request wrapper with retry logic, caching, and proxy support.
 
 ## Features
 
@@ -9,7 +9,7 @@ A professional Python HTTP request wrapper with retry logic, caching, and proxy 
 - **Proxy Support**: Built-in proxy rotation and configuration
 - **SSL Handling**: Proper SSL error handling and verification options
 - **Type Safety**: Full type hints for better IDE support and code reliability
-- **Professional Error Handling**: Custom exceptions for different error conditions
+- **Error Handling**: Custom exceptions for different error conditions
 - **Easy Configuration**: Simple constructor-based configuration with sensible defaults
 
 ## Installation

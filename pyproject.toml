@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "request-wrapper"
 version = "0.1.0"
-description = "A professional HTTP request wrapper with retry logic, caching, and proxy support"
+description = "A HTTP request wrapper with retry logic, caching, and proxy support"
 readme = "README.md"
 authors = [
     {name = "EGDosE", email = "ubaidullah0504@gmail.com"}
@@ -40,10 +40,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/egdose/request-wrapper"
-Repository = "https://github.com/egdose/request-wrapper"
-Documentation = "https://request-wrapper.readthedocs.io/"
-"Bug Reports" = "https://github.com/egdose/request-wrapper/issues"
+Homepage = "https://github.com/egdose/Python-Request-Wrapper"
+Repository = "https://github.com/egdose/Python-Request-Wrapper"
+Documentation = "https://python-request-wrapper.readthedocs.io/"
+"Bug Reports" = "https://github.com/egdose/Python-Request-Wrapper/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
