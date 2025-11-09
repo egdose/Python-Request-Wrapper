@@ -26,6 +26,24 @@ This is a learning project and personal tool - use it if you find it helpful, bu
 
 ## Installation
 
+### From GitHub (Recommended)
+
+Install directly from GitHub:
+
+```bash
+pip install git+https://github.com/egdose/Python-Request-Wrapper.git
+```
+
+For development with extra tools:
+
+```bash
+pip install "git+https://github.com/egdose/Python-Request-Wrapper.git#egg=request-wrapper[dev]"
+```
+
+### From Local Source
+
+If you've cloned the repository:
+
 ```bash
 pip install -e .
 ```
