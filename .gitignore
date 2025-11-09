@@ -144,6 +144,11 @@ cython_debug/
 # Cache directories
 httpcache/
 .cache/
+demo_cache/
+test_cache/
+
+# Log files
+*.log
 
 # OS specific
 .DS_Store

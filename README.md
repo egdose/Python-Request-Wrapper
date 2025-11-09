@@ -2,6 +2,18 @@
 
 A Python HTTP request wrapper with retry logic, caching, and proxy support.
 
+## Disclaimer
+
+**This project was created for personal use and is made public for convenience in installation via GitHub.** The code was developed with the assistance of AI coding tools (GitHub Copilot) to quickly implement functionality. While this code is shared publicly:
+
+- **No Ownership Claims**: I do not claim exclusive ownership or originality of all code patterns and implementations
+- **Use At Your Own Risk**: This software is provided "as is" without warranty of any kind
+- **No Responsibility**: I am not responsible if similar code exists elsewhere or for any issues arising from its use
+- **MIT Licensed**: Feel free to use, modify, or distribute this code under the MIT License terms
+- **Copyright Issues**: If you believe there is a copyright violation or any concerns, please open an issue and I will address it promptly
+
+This is a learning project and personal tool - use it if you find it helpful, but understand the above limitations.
+
 ## Features
 
 - **Retry Logic**: Configurable retry mechanism with exponential backoff for failed requests
