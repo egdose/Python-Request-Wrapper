@@ -19,7 +19,7 @@ This is a learning project and personal tool - use it if you find it helpful, bu
 - **Retry Logic**: Configurable retry mechanism with exponential backoff for failed requests
 - **HTTP Caching**: Scrapy-compatible caching system with optional compression
 - **Proxy Support**: Built-in proxy rotation and configuration
-- **SSL Handling**: Proper SSL error handling and verification options
+- **SSL Handling**: Custom SSL certificate support for proxies, with proper error handling and verification options
 - **Type Safety**: Full type hints for better IDE support and code reliability
 - **Error Handling**: Custom exceptions for different error conditions
 - **Easy Configuration**: Simple constructor-based configuration with sensible defaults
@@ -121,6 +121,49 @@ client = RequestWrapper(
 
 # Requests will rotate through the proxy list
 response = client.get('https://api.example.com/data')
+```
+
+### With Custom SSL Certificate
+
+When using proxies that require custom SSL certificates, you can provide a path to your `.crt` file:
+
+```python
+# Use custom SSL certificate for all requests
+client = RequestWrapper(
+    proxies=proxies,
+    ssl_cert_path='path/to/certificate.crt'  # Path to your SSL certificate
+)
+
+# Now all requests will use your custom certificate for SSL verification
+response = client.get('https://api.example.com/data')
+
+# You can also override SSL verification per-request
+response = client.get(
+    'https://api.example.com/data',
+    verify_ssl='path/to/another/cert.crt'  # Use different cert for this request
+)
+
+# Or disable SSL verification for specific requests (not recommended for production)
+response = client.get(
+    'https://api.example.com/data',
+    verify_ssl=False
+)
+```
+
+**Use Case Example - Corporate Proxy:**
+
+```python
+# When your corporate proxy uses a custom SSL certificate
+proxies = [{'http': 'http://corporate-proxy:8080', 'https': 'https://corporate-proxy:8080'}]
+
+client = RequestWrapper(
+    proxies=proxies,
+    ssl_cert_path='corporate_proxy_ca.crt',  # Corporate CA certificate
+    retry_count=3
+)
+
+# No SSL errors or warnings!
+response = client.get('https://internal-api.company.com/data')
 ```
 
 ## Advanced Usage
@@ -262,19 +305,20 @@ client = RequestWrapper()
 | `timeout`            | int           | 30                                            | Request timeout in seconds            |
 | `user_agent`         | Optional[str] | "RequestWrapper/1.0"                          | Default User-Agent header             |
 | `verify_ssl`         | bool          | True                                          | Verify SSL certificates               |
+| `ssl_cert_path`      | Optional[str] | None                                          | Path to custom SSL certificate (.crt) |
 
 ### Method Parameters
 
 Both `get()` and `post()` methods accept these optional parameters:
 
-| Parameter     | Type              | Description                       |
-| ------------- | ----------------- | --------------------------------- |
-| `headers`     | Dict[str, str]    | Custom request headers            |
-| `retry_count` | int               | Override default retry count      |
-| `proxy`       | Dict[str, str]    | Override default proxy rotation   |
-| `timeout`     | Union[int, float] | Override default timeout          |
-| `verify_ssl`  | bool              | Override SSL verification setting |
-| `use_cache`   | bool              | Override cache usage setting      |
+| Parameter     | Type              | Description                                            |
+| ------------- | ----------------- | ------------------------------------------------------ |
+| `headers`     | Dict[str, str]    | Custom request headers                                 |
+| `retry_count` | int               | Override default retry count                           |
+| `proxy`       | Dict[str, str]    | Override default proxy rotation                        |
+| `timeout`     | Union[int, float] | Override default timeout                               |
+| `verify_ssl`  | Union[bool, str]  | Override SSL verification (True/False or path to .crt) |
+| `use_cache`   | bool              | Override cache usage setting                           |
 
 Additional for `post()`:
 | Parameter | Type | Description |

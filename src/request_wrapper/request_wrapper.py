@@ -163,6 +163,7 @@ class RequestWrapper:
         timeout: int = 30,
         user_agent: Optional[str] = None,
         verify_ssl: bool = True,
+        ssl_cert_path: Optional[str] = None,
     ) -> None:
         """
         Initialize the RequestWrapper.
@@ -177,7 +178,8 @@ class RequestWrapper:
             cache_expiry: Cache expiry time in seconds (None = no expiry)
             timeout: Request timeout in seconds
             user_agent: Default User-Agent header
-            verify_ssl: Verify SSL certificates
+            verify_ssl: Verify SSL certificates (True/False)
+            ssl_cert_path: Path to SSL certificate file (.crt) for custom certificate verification
         """
         self.retry_count = self._validate_retry_count(retry_count)
         self.retry_status_codes = set(
@@ -186,7 +188,10 @@ class RequestWrapper:
         self.proxies = self._validate_proxies(proxies or [])
         self.timeout = self._validate_timeout(timeout)
         self.user_agent = user_agent or "RequestWrapper/1.0"
-        self.verify_ssl = verify_ssl
+        self.ssl_cert_path = self._validate_ssl_cert_path(ssl_cert_path)
+        # If ssl_cert_path is provided, use it; otherwise use verify_ssl boolean
+        self.verify_ssl: Union[bool,
+                               str] = self.ssl_cert_path if self.ssl_cert_path else verify_ssl
 
         # Initialize cache
         self.cache = Cache(
@@ -206,7 +211,8 @@ class RequestWrapper:
         # Set up logging
         self.logger = _setup_default_logging()
         self.logger.info(f"RequestWrapper initialized: retry_count={retry_count}, "
-                         f"cache_enabled={cache_enabled}, proxies_count={len(self.proxies)}")
+                         f"cache_enabled={cache_enabled}, proxies_count={len(self.proxies)}, "
+                         f"ssl_cert={'custom' if ssl_cert_path else 'default'}")
 
     def _validate_retry_count(self, retry_count: int) -> int:
         """Validate retry count parameter."""
@@ -221,6 +227,26 @@ class RequestWrapper:
         if not isinstance(timeout, (int, float)) or timeout <= 0:
             raise InvalidArgumentError("timeout", timeout, "positive number")
         return timeout
+
+    def _validate_ssl_cert_path(self, ssl_cert_path: Optional[str]) -> Optional[str]:
+        """Validate SSL certificate path parameter."""
+        if ssl_cert_path is None:
+            return None
+
+        if not isinstance(ssl_cert_path, str):
+            raise InvalidArgumentError(
+                "ssl_cert_path", ssl_cert_path, "string path to certificate file")
+
+        cert_path = Path(ssl_cert_path)
+        if not cert_path.exists():
+            raise InvalidArgumentError(
+                "ssl_cert_path", ssl_cert_path, "existing file path")
+
+        if not cert_path.is_file():
+            raise InvalidArgumentError(
+                "ssl_cert_path", ssl_cert_path, "file (not directory)")
+
+        return str(cert_path.resolve())
 
     def _validate_proxies(self, proxies: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """Validate proxy configurations."""
@@ -317,7 +343,7 @@ class RequestWrapper:
         json: Optional[Dict[str, Any]] = None,
         proxy: Optional[Dict[str, str]] = None,
         timeout: Optional[Union[int, float]] = None,
-        verify_ssl: Optional[bool] = None,
+        verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
     ) -> requests.Response:
         """
@@ -332,7 +358,7 @@ class RequestWrapper:
             json: JSON data to send
             proxy: Proxy configuration for this request
             timeout: Request timeout
-            verify_ssl: SSL verification for this request
+            verify_ssl: SSL verification for this request (True/False or path to .crt file)
             use_cache: Whether to use cache for this request
 
         Returns:
@@ -431,7 +457,7 @@ class RequestWrapper:
         retry_count: Optional[int] = None,
         proxy: Optional[Dict[str, str]] = None,
         timeout: Optional[Union[int, float]] = None,
-        verify_ssl: Optional[bool] = None,
+        verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
     ) -> requests.Response:
         """
@@ -447,7 +473,7 @@ class RequestWrapper:
             retry_count: Number of retries for this request (overrides default)
             proxy: Proxy configuration (overrides default rotation)
             timeout: Request timeout (overrides default)
-            verify_ssl: SSL verification (overrides default)
+            verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
 
         Returns:
@@ -549,7 +575,7 @@ class RequestWrapper:
         retry_count: Optional[int] = None,
         proxy: Optional[Dict[str, str]] = None,
         timeout: Optional[Union[int, float]] = None,
-        verify_ssl: Optional[bool] = None,
+        verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         **kwargs: Any,
     ) -> requests.Response:
@@ -563,7 +589,7 @@ class RequestWrapper:
             retry_count: Number of retries (overrides default)
             proxy: Proxy configuration (overrides default)
             timeout: Request timeout (overrides default)
-            verify_ssl: SSL verification (overrides default)
+            verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
             **kwargs: Additional arguments passed to requests
 
@@ -592,7 +618,7 @@ class RequestWrapper:
         retry_count: Optional[int] = None,
         proxy: Optional[Dict[str, str]] = None,
         timeout: Optional[Union[int, float]] = None,
-        verify_ssl: Optional[bool] = None,
+        verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         **kwargs: Any,
     ) -> requests.Response:
@@ -607,7 +633,7 @@ class RequestWrapper:
             retry_count: Number of retries (overrides default)
             proxy: Proxy configuration (overrides default)
             timeout: Request timeout (overrides default)
-            verify_ssl: SSL verification (overrides default)
+            verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
             **kwargs: Additional arguments passed to requests
 
