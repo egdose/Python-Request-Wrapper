@@ -65,14 +65,13 @@ from request_wrapper import RequestWrapper
 # Create a client with default settings
 client = RequestWrapper()
 
-# Make a simple GET request
-response, cache_hit = client.get('https://api.example.com/data')
+# Make a simple GET request (default - only returns response)
+response = client.get('https://api.example.com/data')
 print(f"Status: {response.status_code}")
 print(f"Content: {response.text}")
-print(f"From cache: {cache_hit}")
 
 # Make a POST request with JSON data
-response, cache_hit = client.post(
+response = client.post(
     'https://api.example.com/submit',
     json={'name': 'John', 'age': 30}
 )
@@ -87,7 +86,7 @@ client = RequestWrapper(
 )
 
 # This request will be retried on 5xx errors and rate limits
-response, cache_hit = client.get('https://unreliable-api.example.com/data')
+response = client.get('https://unreliable-api.example.com/data')
 ```
 
 ### With Caching
@@ -100,13 +99,12 @@ client = RequestWrapper(
     cache_expiry=3600               # Cache expires after 1 hour
 )
 
-# First request hits the API
-response1, cache_hit1 = client.get('https://api.example.com/data')
-print(f"First request from cache: {cache_hit1}")  # False
+# Default usage - only get response
+response1 = client.get('https://api.example.com/data')
 
-# Second request uses cache
-response2, cache_hit2 = client.get('https://api.example.com/data')
-print(f"Second request from cache: {cache_hit2}")  # True
+# To check if response came from cache, use return_cache_info=True
+response2, cache_hit = client.get('https://api.example.com/data', return_cache_info=True)
+print(f"From cache: {cache_hit}")  # True
 ```
 
 ### With Proxy Rotation
@@ -124,7 +122,7 @@ client = RequestWrapper(
 )
 
 # Requests will rotate through the proxy list
-response, cache_hit = client.get('https://api.example.com/data')
+response = client.get('https://api.example.com/data')
 ```
 
 ### With Custom SSL Certificate
@@ -139,16 +137,16 @@ client = RequestWrapper(
 )
 
 # Now all requests will use your custom certificate for SSL verification
-response, cache_hit = client.get('https://api.example.com/data')
+response = client.get('https://api.example.com/data')
 
 # You can also override SSL verification per-request
-response, cache_hit = client.get(
+response = client.get(
     'https://api.example.com/data',
     verify_ssl='path/to/another/cert.crt'  # Use different cert for this request
 )
 
 # Or disable SSL verification for specific requests (not recommended for production)
-response, cache_hit = client.get(
+response = client.get(
     'https://api.example.com/data',
     verify_ssl=False
 )
@@ -167,7 +165,7 @@ client = RequestWrapper(
 )
 
 # No SSL errors or warnings!
-response, cache_hit = client.get('https://internal-api.company.com/data')
+response = client.get('https://internal-api.company.com/data')
 ```
 
 ### With Cookies
@@ -181,16 +179,16 @@ client = RequestWrapper(
 )
 
 # All requests will include these cookies
-response, cache_hit = client.get('https://api.example.com/data')
+response = client.get('https://api.example.com/data')
 
 # Add additional cookies for a specific request (merges with default)
-response, cache_hit = client.get(
+response = client.get(
     'https://api.example.com/user/profile',
     cookies={'auth_token': 'xyz789'}  # Merged with default cookies
 )
 
 # Only use specific cookies for a request (still merges with default)
-response, cache_hit = client.post(
+response = client.post(
     'https://api.example.com/submit',
     json={'key': 'value'},
     cookies={'csrf_token': 'token123'}
@@ -209,8 +207,8 @@ client = RequestWrapper(
 )
 
 # All subsequent requests will include these cookies
-response, cache_hit = client.get('https://api.example.com/protected/resource')
-user_data, cache_hit = client.get('https://api.example.com/user/data')
+response = client.get('https://api.example.com/protected/resource')
+user_data = client.get('https://api.example.com/user/data')
 ```
 
 ## Advanced Usage
@@ -237,7 +235,7 @@ print(client.get_retry_status_codes())
 client = RequestWrapper(cache_enabled=True, proxies=proxies, cookies={'session': 'default'})
 
 # Override settings for specific requests
-response, cache_hit = client.get(
+response = client.get(
     'https://api.example.com/data',
     retry_count=10,                  # Override default retry count
     use_cache=False,                 # Bypass cache for this request
@@ -360,7 +358,20 @@ client = RequestWrapper()
 
 Both `get()` and `post()` methods accept these optional parameters:
 
-**Note:** Both methods return a tuple: `(response, cache_hit)` where `cache_hit` is a boolean indicating if the response came from cache.
+**Return Values:**
+
+- By default, methods return only the `Response` object
+- Set `return_cache_info=True` to get a tuple: `(response, cache_hit)` where `cache_hit` is a boolean indicating if the response came from cache
+
+```python
+# Default - only response
+response = client.get(url)
+
+# With cache info
+response, cache_hit = client.get(url, return_cache_info=True)
+if cache_hit:
+    print("Response from cache!")
+```
 
 | Parameter     | Type              | Description                                            |
 | ------------- | ----------------- | ------------------------------------------------------ |
