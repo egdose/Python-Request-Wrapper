@@ -19,6 +19,7 @@ This is a learning project and personal tool - use it if you find it helpful, bu
 - **Retry Logic**: Configurable retry mechanism with exponential backoff for failed requests
 - **HTTP Caching**: Scrapy-compatible caching system with optional compression
 - **Proxy Support**: Built-in proxy rotation and configuration
+- **Rate Limiting**: Random delay option for non-cached requests to avoid overwhelming servers
 - **SSL Handling**: Custom SSL certificate support for proxies, with proper error handling and verification options
 - **Cookie Management**: Support for default cookies and per-request cookie customization
 - **Type Safety**: Full type hints for better IDE support and code reliability
@@ -104,6 +105,31 @@ response1 = client.get('https://api.example.com/data')
 
 # Second request uses cache
 response2 = client.get('https://api.example.com/data')  # From cache
+```
+
+### With Random Delay (Rate Limiting)
+
+```python
+client = RequestWrapper(cache_enabled=True)
+
+# Add random delay between 2-5 seconds for non-cached requests
+# This helps avoid overwhelming servers or triggering rate limits
+response = client.get(
+    'https://api.example.com/data',
+    random_delay=(2, 5)  # Delay 2-5 seconds after successful request
+)
+
+# Cached responses return immediately (no delay applied)
+response2 = client.get(
+    'https://api.example.com/data',
+    random_delay=(2, 5)  # No delay - cache hit!
+)
+
+# Useful for scraping multiple pages politely
+urls = ['https://api.example.com/page1', 'https://api.example.com/page2']
+for url in urls:
+    response = client.get(url, random_delay=(3, 7))  # 3-7 second delay between requests
+    # Process response...
 ```
 
 ### With Proxy Rotation
@@ -241,7 +267,8 @@ response = client.get(
     proxy={'http': 'http://special-proxy:8080'},  # Use specific proxy
     timeout=60,                      # Custom timeout
     verify_ssl=False,                # Disable SSL verification
-    cookies={'temp_token': 'xyz'}    # Additional cookies (merged with default)
+    cookies={'temp_token': 'xyz'},   # Additional cookies (merged with default)
+    random_delay=(1, 3)              # Add 1-3 second delay after non-cached requests
 )
 ```
 
@@ -357,15 +384,16 @@ client = RequestWrapper()
 
 Both `get()` and `post()` methods accept these optional parameters:
 
-| Parameter     | Type              | Description                                            |
-| ------------- | ----------------- | ------------------------------------------------------ |
-| `headers`     | Dict[str, str]    | Custom request headers                                 |
-| `retry_count` | int               | Override default retry count                           |
-| `proxy`       | Dict[str, str]    | Override default proxy rotation                        |
-| `timeout`     | Union[int, float] | Override default timeout                               |
-| `verify_ssl`  | Union[bool, str]  | Override SSL verification (True/False or path to .crt) |
-| `use_cache`   | bool              | Override cache usage setting                           |
-| `cookies`     | Dict[str, str]    | Cookies for request (merges with default)              |
+| Parameter      | Type                      | Description                                                             |
+| -------------- | ------------------------- | ----------------------------------------------------------------------- |
+| `headers`      | Dict[str, str]            | Custom request headers                                                  |
+| `retry_count`  | int                       | Override default retry count                                            |
+| `proxy`        | Dict[str, str]            | Override default proxy rotation                                         |
+| `timeout`      | Union[int, float]         | Override default timeout                                                |
+| `verify_ssl`   | Union[bool, str]          | Override SSL verification (True/False or path to .crt)                  |
+| `use_cache`    | bool                      | Override cache usage setting                                            |
+| `cookies`      | Dict[str, str]            | Cookies for request (merges with default)                               |
+| `random_delay` | Optional[Tuple[int, int]] | Random delay (min, max) in seconds after successful non-cached requests |
 
 Additional for `post()`:
 | Parameter | Type | Description |

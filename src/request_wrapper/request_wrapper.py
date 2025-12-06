@@ -5,6 +5,7 @@ This module provides a comprehensive HTTP client wrapper that includes:
 - Configurable retry logic for failed requests
 - HTTP caching compatible with Scrapy
 - Proxy support with rotation capabilities
+- Random delay for rate limiting (applies only to non-cached requests)
 - Comprehensive error handling
 """
 
@@ -12,7 +13,8 @@ import time
 import ssl
 import logging
 import sys
-from typing import Dict, List, Optional, Union, Any
+import random
+from typing import Dict, List, Optional, Union, Any, Tuple
 from urllib.parse import urlparse
 from pathlib import Path
 
@@ -350,6 +352,7 @@ class RequestWrapper:
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
+        random_delay: Optional[Tuple[int, int]] = None,
     ) -> requests.Response:
         """
         Make a single HTTP request with all the configured options.
@@ -366,6 +369,7 @@ class RequestWrapper:
             verify_ssl: SSL verification for this request (True/False or path to .crt file)
             use_cache: Whether to use cache for this request
             cookies: Cookies for this request
+            random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
 
         Returns:
             Response object
@@ -398,11 +402,13 @@ class RequestWrapper:
             body_bytes = json_lib.dumps(json).encode("utf-8")
 
         # Check cache first
+        cache_hit = False
         if use_cache and method.upper() in ["GET", "HEAD"]:
             path_str = []
             cached_response = self.cache.get(
                 method, url, headers, body_bytes, params, cache_hit_path=path_str)
             if cached_response:
+                cache_hit = True
                 self.logger.debug(f"Cache hit for {method} {url}")
                 if len(path_str) > 0:
                     self.logger.info(f"{url} - cache hit -> {path_str[0]}")
@@ -448,6 +454,14 @@ class RequestWrapper:
                         f"Failed to cache response for {method} {url}: {e}")
                     pass
 
+            # Apply random delay if this was not a cache hit and delay is configured
+            if not cache_hit and random_delay is not None:
+                min_delay, max_delay = random_delay
+                delay_seconds = random.randint(min_delay, max_delay)
+                self.logger.debug(
+                    f"Applying random delay: {delay_seconds} seconds")
+                time.sleep(delay_seconds)
+
             return response
 
         except RequestsSSLError as e:
@@ -469,6 +483,7 @@ class RequestWrapper:
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
+        random_delay: Optional[Tuple[int, int]] = None,
     ) -> requests.Response:
         """
         Make an HTTP request with retry logic.
@@ -486,6 +501,7 @@ class RequestWrapper:
             verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
             cookies: Cookies for this request (merges with default cookies)
+            random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
 
         Returns:
             Response object
@@ -532,6 +548,7 @@ class RequestWrapper:
                     verify_ssl=verify_ssl,
                     use_cache=use_cache,
                     cookies=cookies,
+                    random_delay=random_delay,
                 )
 
                 # Check if we should retry based on status code
@@ -590,6 +607,7 @@ class RequestWrapper:
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
+        random_delay: Optional[Tuple[int, int]] = None,
         **kwargs: Any,
     ) -> requests.Response:
         """
@@ -605,6 +623,7 @@ class RequestWrapper:
             verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
             cookies: Cookies for this request (merges with default cookies)
+            random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
             **kwargs: Additional arguments passed to requests
 
         Returns:
@@ -621,6 +640,7 @@ class RequestWrapper:
             verify_ssl=verify_ssl,
             use_cache=use_cache,
             cookies=cookies,
+            random_delay=random_delay,
             **kwargs,
         )
 
@@ -636,6 +656,7 @@ class RequestWrapper:
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
+        random_delay: Optional[Tuple[int, int]] = None,
         **kwargs: Any,
     ) -> requests.Response:
         """
@@ -652,6 +673,7 @@ class RequestWrapper:
             verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
             cookies: Cookies for this request (merges with default cookies)
+            random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
             **kwargs: Additional arguments passed to requests
 
         Returns:
@@ -669,6 +691,7 @@ class RequestWrapper:
             verify_ssl=verify_ssl,
             use_cache=use_cache,
             cookies=cookies,
+            random_delay=random_delay,
             **kwargs,
         )
 
