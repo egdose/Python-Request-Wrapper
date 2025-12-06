@@ -20,6 +20,7 @@ This is a learning project and personal tool - use it if you find it helpful, bu
 - **HTTP Caching**: Scrapy-compatible caching system with optional compression
 - **Proxy Support**: Built-in proxy rotation and configuration
 - **SSL Handling**: Custom SSL certificate support for proxies, with proper error handling and verification options
+- **Cookie Management**: Support for default cookies and per-request cookie customization
 - **Type Safety**: Full type hints for better IDE support and code reliability
 - **Error Handling**: Custom exceptions for different error conditions
 - **Easy Configuration**: Simple constructor-based configuration with sensible defaults
@@ -166,6 +167,49 @@ client = RequestWrapper(
 response = client.get('https://internal-api.company.com/data')
 ```
 
+### With Cookies
+
+You can set default cookies for all requests or provide them per-request:
+
+```python
+# Set default cookies for all requests
+client = RequestWrapper(
+    cookies={'session_id': 'abc123', 'user_pref': 'dark_mode'}
+)
+
+# All requests will include these cookies
+response = client.get('https://api.example.com/data')
+
+# Add additional cookies for a specific request (merges with default)
+response = client.get(
+    'https://api.example.com/user/profile',
+    cookies={'auth_token': 'xyz789'}  # Merged with default cookies
+)
+
+# Only use specific cookies for a request (still merges with default)
+response = client.post(
+    'https://api.example.com/submit',
+    json={'key': 'value'},
+    cookies={'csrf_token': 'token123'}
+)
+```
+
+**Authentication Example:**
+
+```python
+# Maintain session with cookies
+client = RequestWrapper(
+    cookies={
+        'session_id': 'your_session_id',
+        'auth_token': 'your_auth_token'
+    }
+)
+
+# All subsequent requests will include these cookies
+response = client.get('https://api.example.com/protected/resource')
+user_data = client.get('https://api.example.com/user/data')
+```
+
 ## Advanced Usage
 
 ### Custom Retry Status Codes
@@ -187,7 +231,7 @@ print(client.get_retry_status_codes())
 ### Per-Request Configuration
 
 ```python
-client = RequestWrapper(cache_enabled=True, proxies=proxies)
+client = RequestWrapper(cache_enabled=True, proxies=proxies, cookies={'session': 'default'})
 
 # Override settings for specific requests
 response = client.get(
@@ -196,7 +240,8 @@ response = client.get(
     use_cache=False,                 # Bypass cache for this request
     proxy={'http': 'http://special-proxy:8080'},  # Use specific proxy
     timeout=60,                      # Custom timeout
-    verify_ssl=False                 # Disable SSL verification
+    verify_ssl=False,                # Disable SSL verification
+    cookies={'temp_token': 'xyz'}    # Additional cookies (merged with default)
 )
 ```
 
@@ -293,19 +338,20 @@ client = RequestWrapper()
 
 ### RequestWrapper Constructor
 
-| Parameter            | Type          | Default                                       | Description                           |
-| -------------------- | ------------- | --------------------------------------------- | ------------------------------------- |
-| `retry_count`        | int           | 3                                             | Number of retries for failed requests |
-| `retry_status_codes` | List[int]     | [500, 502, 503, 504, 520, 521, 522, 523, 524] | Status codes that trigger retries     |
-| `proxies`            | List[Dict]    | []                                            | List of proxy configurations          |
-| `cache_enabled`      | bool          | False                                         | Enable/disable request caching        |
-| `cache_dir`          | str           | "httpcache"                                   | Directory for cache storage           |
-| `cache_compress`     | bool          | False                                         | Compress cached files                 |
-| `cache_expiry`       | Optional[int] | None                                          | Cache expiry in seconds               |
-| `timeout`            | int           | 30                                            | Request timeout in seconds            |
-| `user_agent`         | Optional[str] | "RequestWrapper/1.0"                          | Default User-Agent header             |
-| `verify_ssl`         | bool          | True                                          | Verify SSL certificates               |
-| `ssl_cert_path`      | Optional[str] | None                                          | Path to custom SSL certificate (.crt) |
+| Parameter            | Type                     | Default                                       | Description                           |
+| -------------------- | ------------------------ | --------------------------------------------- | ------------------------------------- |
+| `retry_count`        | int                      | 3                                             | Number of retries for failed requests |
+| `retry_status_codes` | List[int]                | [500, 502, 503, 504, 520, 521, 522, 523, 524] | Status codes that trigger retries     |
+| `proxies`            | List[Dict]               | []                                            | List of proxy configurations          |
+| `cache_enabled`      | bool                     | False                                         | Enable/disable request caching        |
+| `cache_dir`          | str                      | "httpcache"                                   | Directory for cache storage           |
+| `cache_compress`     | bool                     | False                                         | Compress cached files                 |
+| `cache_expiry`       | Optional[int]            | None                                          | Cache expiry in seconds               |
+| `timeout`            | int                      | 30                                            | Request timeout in seconds            |
+| `user_agent`         | Optional[str]            | "RequestWrapper/1.0"                          | Default User-Agent header             |
+| `verify_ssl`         | bool                     | True                                          | Verify SSL certificates               |
+| `ssl_cert_path`      | Optional[str]            | None                                          | Path to custom SSL certificate (.crt) |
+| `cookies`            | Optional[Dict[str, str]] | None                                          | Default cookies for all requests      |
 
 ### Method Parameters
 
@@ -319,6 +365,7 @@ Both `get()` and `post()` methods accept these optional parameters:
 | `timeout`     | Union[int, float] | Override default timeout                               |
 | `verify_ssl`  | Union[bool, str]  | Override SSL verification (True/False or path to .crt) |
 | `use_cache`   | bool              | Override cache usage setting                           |
+| `cookies`     | Dict[str, str]    | Cookies for request (merges with default)              |
 
 Additional for `post()`:
 | Parameter | Type | Description |

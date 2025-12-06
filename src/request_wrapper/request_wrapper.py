@@ -164,6 +164,7 @@ class RequestWrapper:
         user_agent: Optional[str] = None,
         verify_ssl: bool = True,
         ssl_cert_path: Optional[str] = None,
+        cookies: Optional[Dict[str, str]] = None,
     ) -> None:
         """
         Initialize the RequestWrapper.
@@ -180,6 +181,7 @@ class RequestWrapper:
             user_agent: Default User-Agent header
             verify_ssl: Verify SSL certificates (True/False)
             ssl_cert_path: Path to SSL certificate file (.crt) for custom certificate verification
+            cookies: Default cookies to include in all requests
         """
         self.retry_count = self._validate_retry_count(retry_count)
         self.retry_status_codes = set(
@@ -192,6 +194,7 @@ class RequestWrapper:
         # If ssl_cert_path is provided, use it; otherwise use verify_ssl boolean
         self.verify_ssl: Union[bool,
                                str] = self.ssl_cert_path if self.ssl_cert_path else verify_ssl
+        self.cookies = cookies or {}
 
         # Initialize cache
         self.cache = Cache(
@@ -212,7 +215,8 @@ class RequestWrapper:
         self.logger = _setup_default_logging()
         self.logger.info(f"RequestWrapper initialized: retry_count={retry_count}, "
                          f"cache_enabled={cache_enabled}, proxies_count={len(self.proxies)}, "
-                         f"ssl_cert={'custom' if ssl_cert_path else 'default'}")
+                         f"ssl_cert={'custom' if ssl_cert_path else 'default'}, "
+                         f"cookies_count={len(self.cookies)}")
 
     def _validate_retry_count(self, retry_count: int) -> int:
         """Validate retry count parameter."""
@@ -345,6 +349,7 @@ class RequestWrapper:
         timeout: Optional[Union[int, float]] = None,
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
+        cookies: Optional[Dict[str, str]] = None,
     ) -> requests.Response:
         """
         Make a single HTTP request with all the configured options.
@@ -360,6 +365,7 @@ class RequestWrapper:
             timeout: Request timeout
             verify_ssl: SSL verification for this request (True/False or path to .crt file)
             use_cache: Whether to use cache for this request
+            cookies: Cookies for this request
 
         Returns:
             Response object
@@ -372,6 +378,8 @@ class RequestWrapper:
         timeout = timeout or self.timeout
         verify_ssl = verify_ssl if verify_ssl is not None else self.verify_ssl
         use_cache = use_cache if use_cache is not None else self.cache.enabled
+        # Merge default cookies with request-specific cookies
+        request_cookies = {**self.cookies, **(cookies or {})}
 
         # Convert data to bytes for caching
         body_bytes = b""
@@ -409,6 +417,7 @@ class RequestWrapper:
             "timeout": timeout,
             "verify": verify_ssl,
             "proxies": proxy,
+            "cookies": request_cookies,
         }
 
         if params is not None:
@@ -459,6 +468,7 @@ class RequestWrapper:
         timeout: Optional[Union[int, float]] = None,
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
+        cookies: Optional[Dict[str, str]] = None,
     ) -> requests.Response:
         """
         Make an HTTP request with retry logic.
@@ -475,6 +485,7 @@ class RequestWrapper:
             timeout: Request timeout (overrides default)
             verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
+            cookies: Cookies for this request (merges with default cookies)
 
         Returns:
             Response object
@@ -520,6 +531,7 @@ class RequestWrapper:
                     timeout=timeout,
                     verify_ssl=verify_ssl,
                     use_cache=use_cache,
+                    cookies=cookies,
                 )
 
                 # Check if we should retry based on status code
@@ -577,6 +589,7 @@ class RequestWrapper:
         timeout: Optional[Union[int, float]] = None,
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
+        cookies: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> requests.Response:
         """
@@ -591,6 +604,7 @@ class RequestWrapper:
             timeout: Request timeout (overrides default)
             verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
+            cookies: Cookies for this request (merges with default cookies)
             **kwargs: Additional arguments passed to requests
 
         Returns:
@@ -606,6 +620,7 @@ class RequestWrapper:
             timeout=timeout,
             verify_ssl=verify_ssl,
             use_cache=use_cache,
+            cookies=cookies,
             **kwargs,
         )
 
@@ -620,6 +635,7 @@ class RequestWrapper:
         timeout: Optional[Union[int, float]] = None,
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
+        cookies: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> requests.Response:
         """
@@ -635,6 +651,7 @@ class RequestWrapper:
             timeout: Request timeout (overrides default)
             verify_ssl: SSL verification - True, False, or path to .crt file (overrides default)
             use_cache: Whether to use cache (overrides default)
+            cookies: Cookies for this request (merges with default cookies)
             **kwargs: Additional arguments passed to requests
 
         Returns:
@@ -651,6 +668,7 @@ class RequestWrapper:
             timeout=timeout,
             verify_ssl=verify_ssl,
             use_cache=use_cache,
+            cookies=cookies,
             **kwargs,
         )
 
