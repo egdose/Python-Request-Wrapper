@@ -350,7 +350,7 @@ class RequestWrapper:
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
-    ) -> requests.Response:
+    ) -> tuple[requests.Response, bool]:
         """
         Make a single HTTP request with all the configured options.
 
@@ -368,7 +368,7 @@ class RequestWrapper:
             cookies: Cookies for this request
 
         Returns:
-            Response object
+            Tuple of (Response object, cache_hit boolean)
 
         Raises:
             Various exceptions based on request failure type
@@ -406,7 +406,7 @@ class RequestWrapper:
                 self.logger.debug(f"Cache hit for {method} {url}")
                 if len(path_str) > 0:
                     self.logger.info(f"{url} - cache hit -> {path_str[0]}")
-                return cached_response
+                return cached_response, True
 
         self.logger.debug(
             f"Making {method} request to {url} (cache: {'enabled' if use_cache else 'disabled'})")
@@ -448,7 +448,7 @@ class RequestWrapper:
                         f"Failed to cache response for {method} {url}: {e}")
                     pass
 
-            return response
+            return response, False
 
         except RequestsSSLError as e:
             raise CustomSSLError(url, e)
@@ -469,7 +469,7 @@ class RequestWrapper:
         verify_ssl: Optional[Union[bool, str]] = None,
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
-    ) -> requests.Response:
+    ) -> tuple[requests.Response, bool]:
         """
         Make an HTTP request with retry logic.
 
@@ -488,7 +488,7 @@ class RequestWrapper:
             cookies: Cookies for this request (merges with default cookies)
 
         Returns:
-            Response object
+            Tuple of (Response object, cache_hit boolean)
 
         Raises:
             MaxRetriesExceededError: When max retries exceeded
@@ -520,7 +520,7 @@ class RequestWrapper:
                 if current_proxy:
                     self.logger.debug(f"Using proxy: {current_proxy}")
 
-                response = self._make_request(
+                response, cache_hit = self._make_request(
                     method=method,
                     url=url,
                     params=params,
@@ -539,7 +539,7 @@ class RequestWrapper:
                     if attempt > 0:
                         self.logger.info(
                             f"Request succeeded after {attempt} retries")
-                    return response
+                    return response, cache_hit
 
                 last_response = response
                 self.logger.warning(f"Request failed with status {response.status_code}, "
@@ -591,7 +591,7 @@ class RequestWrapper:
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
         **kwargs: Any,
-    ) -> requests.Response:
+    ) -> tuple[requests.Response, bool]:
         """
         Make a GET request.
 
@@ -608,7 +608,7 @@ class RequestWrapper:
             **kwargs: Additional arguments passed to requests
 
         Returns:
-            Response object
+            Tuple of (Response object, cache_hit boolean)
         """
         return self.request(
             method="GET",
@@ -637,7 +637,7 @@ class RequestWrapper:
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
         **kwargs: Any,
-    ) -> requests.Response:
+    ) -> tuple[requests.Response, bool]:
         """
         Make a POST request.
 
@@ -655,7 +655,7 @@ class RequestWrapper:
             **kwargs: Additional arguments passed to requests
 
         Returns:
-            Response object
+            Tuple of (Response object, cache_hit boolean)
         """
         return self.request(
             method="POST",
