@@ -352,8 +352,8 @@ class RequestWrapper:
                 except Exception as e:
                     self.logger.error(
                         f"Response validator function raised exception: {type(e).__name__}: {e}")
-                    # Don't retry on validator errors to avoid infinite loops
-                    return False
+                    # I want it to retry if there is an exception in the response validator
+                    return True
 
         return False
 
@@ -372,6 +372,7 @@ class RequestWrapper:
         cookies: Optional[Dict[str, str]] = None,
         random_delay: Optional[Tuple[int, int]] = None,
         response_validator: Optional[Callable[[str], bool]] = None,
+        force_fresh: bool = False,
     ) -> requests.Response:
         """
         Make a single HTTP request with all the configured options.
@@ -390,6 +391,7 @@ class RequestWrapper:
             cookies: Cookies for this request
             random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
             response_validator: Optional function that takes response text and returns True if valid
+            force_fresh: If True, bypass cache read but still allow cache write (used for retries)
 
         Returns:
             Response object
@@ -421,9 +423,9 @@ class RequestWrapper:
 
             body_bytes = json_lib.dumps(json).encode("utf-8")
 
-        # Check cache first
+        # Check cache first (unless force_fresh is True)
         cache_hit = False
-        if use_cache and method.upper() in ["GET", "HEAD"]:
+        if use_cache and method.upper() in ["GET", "HEAD"] and not force_fresh:
             path_str = []
             cached_response = self.cache.get(
                 method, url, headers, body_bytes, params, cache_hit_path=path_str
@@ -611,6 +613,8 @@ class RequestWrapper:
                     use_cache=use_cache,
                     cookies=cookies,
                     random_delay=random_delay,
+                    response_validator=response_validator,
+                    force_fresh=attempt > 0,  # Force fresh request on retries
                 )
 
                 # Check if we should retry based on status code and validator
