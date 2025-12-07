@@ -14,7 +14,7 @@ import ssl
 import logging
 import sys
 import random
-from typing import Dict, List, Optional, Union, Any, Tuple
+from typing import Dict, List, Optional, Union, Any, Tuple, Callable
 from urllib.parse import urlparse
 from pathlib import Path
 
@@ -327,7 +327,10 @@ class RequestWrapper:
         return proxy
 
     def _should_retry(
-        self, response: Optional[requests.Response], exception: Optional[Exception]
+        self,
+        response: Optional[requests.Response],
+        exception: Optional[Exception],
+        response_validator: Optional[Callable[[str], bool]] = None
     ) -> bool:
         """Determine if a request should be retried."""
         if exception:
@@ -336,6 +339,21 @@ class RequestWrapper:
 
         if response and response.status_code in self.retry_status_codes:
             return True
+
+        # Check custom validator if provided and status code is successful
+        if response and response_validator is not None:
+            if response.status_code < 400:  # Only validate successful status codes
+                try:
+                    is_valid = response_validator(response.text)
+                    if not is_valid:
+                        self.logger.warning(
+                            f"Response validation failed for {response.url}")
+                        return True  # Retry if validation fails
+                except Exception as e:
+                    self.logger.error(
+                        f"Response validator function raised exception: {type(e).__name__}: {e}")
+                    # Don't retry on validator errors to avoid infinite loops
+                    return False
 
         return False
 
@@ -484,6 +502,7 @@ class RequestWrapper:
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
         random_delay: Optional[Tuple[int, int]] = None,
+        response_validator: Optional[Callable[[str], bool]] = None,
     ) -> requests.Response:
         """
         Make an HTTP request with retry logic.
@@ -502,6 +521,7 @@ class RequestWrapper:
             use_cache: Whether to use cache (overrides default)
             cookies: Cookies for this request (merges with default cookies)
             random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
+            response_validator: Optional function that takes response text and returns True if valid
 
         Returns:
             Response object
@@ -551,8 +571,8 @@ class RequestWrapper:
                     random_delay=random_delay,
                 )
 
-                # Check if we should retry based on status code
-                if not self._should_retry(response, None):
+                # Check if we should retry based on status code and validator
+                if not self._should_retry(response, None, response_validator):
                     if attempt > 0:
                         self.logger.info(
                             f"Request succeeded after {attempt} retries")
@@ -573,7 +593,7 @@ class RequestWrapper:
                     raise e
 
                 # Check if we should retry based on exception type
-                if not self._should_retry(None, e):
+                if not self._should_retry(None, e, response_validator):
                     self.logger.error(
                         f"Non-retryable exception occurred: {type(e).__name__}: {e}")
                     raise e
@@ -608,6 +628,7 @@ class RequestWrapper:
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
         random_delay: Optional[Tuple[int, int]] = None,
+        response_validator: Optional[Callable[[str], bool]] = None,
         **kwargs: Any,
     ) -> requests.Response:
         """
@@ -624,6 +645,7 @@ class RequestWrapper:
             use_cache: Whether to use cache (overrides default)
             cookies: Cookies for this request (merges with default cookies)
             random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
+            response_validator: Optional function that takes response text and returns True if valid
             **kwargs: Additional arguments passed to requests
 
         Returns:
@@ -641,6 +663,7 @@ class RequestWrapper:
             use_cache=use_cache,
             cookies=cookies,
             random_delay=random_delay,
+            response_validator=response_validator,
             **kwargs,
         )
 
@@ -657,6 +680,7 @@ class RequestWrapper:
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
         random_delay: Optional[Tuple[int, int]] = None,
+        response_validator: Optional[Callable[[str], bool]] = None,
         **kwargs: Any,
     ) -> requests.Response:
         """
@@ -674,6 +698,7 @@ class RequestWrapper:
             use_cache: Whether to use cache (overrides default)
             cookies: Cookies for this request (merges with default cookies)
             random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
+            response_validator: Optional function that takes response text and returns True if valid
             **kwargs: Additional arguments passed to requests
 
         Returns:
@@ -692,6 +717,7 @@ class RequestWrapper:
             use_cache=use_cache,
             cookies=cookies,
             random_delay=random_delay,
+            response_validator=response_validator,
             **kwargs,
         )
 
