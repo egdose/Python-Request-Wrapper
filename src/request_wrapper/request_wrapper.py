@@ -695,6 +695,75 @@ class RequestWrapper:
             **kwargs,
         )
 
+    def delete_cache(
+        self,
+        method: str,
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        data: Optional[Union[str, bytes, Dict[str, Any]]] = None,
+        json: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """
+        Delete the cache entry for a specific request.
+
+        This method uses the same parameters as the request methods (get, post, etc.)
+        to identify and delete the corresponding cache entry.
+
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            url: Target URL
+            params: URL parameters to append to the URL
+            headers: Request headers
+            data: Request body data
+            json: JSON data to send
+
+        Returns:
+            True if cache was deleted, False if no cache entry existed
+
+        Example:
+            # Make a request
+            response = client.get('https://api.example.com/data', params={'id': '123'})
+
+            # Delete the cache for that specific request
+            client.delete_cache('GET', 'https://api.example.com/data', params={'id': '123'})
+
+            # Or use with POST
+            response = client.post('https://api.example.com/submit', json={'key': 'value'})
+            client.delete_cache('POST', 'https://api.example.com/submit', json={'key': 'value'})
+        """
+        method = method.upper()
+        headers = headers or {}
+
+        # Convert data to bytes (same logic as _make_request)
+        body_bytes = b""
+        if data:
+            if isinstance(data, str):
+                body_bytes = data.encode("utf-8")
+            elif isinstance(data, bytes):
+                body_bytes = data
+            elif isinstance(data, dict):
+                import urllib.parse
+                body_bytes = urllib.parse.urlencode(data).encode("utf-8")
+        elif json:
+            import json as json_lib
+            body_bytes = json_lib.dumps(json).encode("utf-8")
+
+        deleted = self.cache.delete(
+            method=method,
+            url=url,
+            headers=headers,
+            body=body_bytes,
+            params=params,
+        )
+
+        if deleted:
+            self.logger.info(f"Deleted cache for {method} {url}")
+        else:
+            self.logger.debug(f"No cache entry found for {method} {url}")
+
+        return deleted
+
     def clear_cache(self) -> None:
         """Clear all cached requests."""
         cache_size = self.cache.size()

@@ -284,8 +284,36 @@ client.get('https://api.example.com/users')
 # Check cache size
 print(f"Cache contains {client.get_cache_size()} items")
 
-# Clear cache
+# Delete cache for a specific request
+# Use the same arguments as you used for the original request
+client.delete_cache('GET', 'https://api.example.com/data')
+
+# Delete cache with parameters
+client.get('https://api.example.com/search', params={'q': 'python'})
+client.delete_cache('GET', 'https://api.example.com/search', params={'q': 'python'})
+
+# Delete cache for POST requests with JSON data
+client.post('https://api.example.com/submit', json={'key': 'value'})
+client.delete_cache('POST', 'https://api.example.com/submit', json={'key': 'value'})
+
+# Clear all cache
 client.clear_cache()
+```
+
+**Cache Invalidation Example:**
+
+```python
+client = RequestWrapper(cache_enabled=True, cache_expiry=3600)
+
+# Make a request
+response = client.get('https://api.example.com/data', params={'id': '123'})
+
+# Later, if you know the data is stale or invalid
+if data_needs_refresh:
+    # Delete the specific cache entry
+    client.delete_cache('GET', 'https://api.example.com/data', params={'id': '123'})
+    # Next request will fetch fresh data
+    response = client.get('https://api.example.com/data', params={'id': '123'})
 ```
 
 ### Logging Configuration
