@@ -20,6 +20,7 @@ This is a learning project and personal tool - use it if you find it helpful, bu
 - **HTTP Caching**: Scrapy-compatible caching system with optional compression
 - **Proxy Support**: Built-in proxy rotation and configuration
 - **Rate Limiting**: Random delay option for non-cached requests to avoid overwhelming servers
+- **Response Validation**: Custom validation functions to verify response content and trigger retries on invalid data
 - **SSL Handling**: Custom SSL certificate support for proxies, with proper error handling and verification options
 - **Cookie Management**: Support for default cookies and per-request cookie customization
 - **Type Safety**: Full type hints for better IDE support and code reliability
@@ -254,6 +255,59 @@ client.remove_retry_status_code(500)
 print(client.get_retry_status_codes())
 ```
 
+### Custom Response Validation
+
+You can provide a custom validation function to verify response content. If the validator returns `False`, the request will be retried.
+
+```python
+import json
+
+# Example 1: Validate JSON structure
+def validate_json_response(response_text: str) -> bool:
+    """Check if response contains expected data."""
+    try:
+        data = json.loads(response_text)
+        return 'result' in data and data['result'] is not None
+    except:
+        return False
+
+response = client.get(
+    'https://api.example.com/data',
+    response_validator=validate_json_response,
+    retry_count=5  # Will retry up to 5 times if validation fails
+)
+
+# Example 2: Check for error messages in response
+def validate_no_errors(response_text: str) -> bool:
+    """Ensure response doesn't contain error indicators."""
+    error_keywords = ['error', 'failed', 'unavailable']
+    text_lower = response_text.lower()
+    return not any(keyword in text_lower for keyword in error_keywords)
+
+response = client.get(
+    'https://api.example.com/status',
+    response_validator=validate_no_errors
+)
+
+# Example 3: Validate minimum content length
+def validate_content_length(response_text: str) -> bool:
+    """Ensure response has meaningful content."""
+    return len(response_text.strip()) > 100
+
+response = client.post(
+    'https://api.example.com/report',
+    json={'report_id': '123'},
+    response_validator=validate_content_length
+)
+```
+
+**How it works:**
+
+- Validator is called **only** for successful responses (status code < 400)
+- Validator runs **after** status code checks
+- If validator returns `False`, the request is retried according to retry settings
+- If validator raises an exception, it's logged and request is NOT retried (to prevent infinite loops)
+
 ### Per-Request Configuration
 
 ```python
@@ -268,7 +322,8 @@ response = client.get(
     timeout=60,                      # Custom timeout
     verify_ssl=False,                # Disable SSL verification
     cookies={'temp_token': 'xyz'},   # Additional cookies (merged with default)
-    random_delay=(1, 3)              # Add 1-3 second delay after non-cached requests
+    random_delay=(1, 3),             # Add 1-3 second delay after non-cached requests
+    response_validator=lambda text: 'success' in text  # Custom validation
 )
 ```
 
@@ -412,16 +467,17 @@ client = RequestWrapper()
 
 Both `get()` and `post()` methods accept these optional parameters:
 
-| Parameter      | Type                      | Description                                                             |
-| -------------- | ------------------------- | ----------------------------------------------------------------------- |
-| `headers`      | Dict[str, str]            | Custom request headers                                                  |
-| `retry_count`  | int                       | Override default retry count                                            |
-| `proxy`        | Dict[str, str]            | Override default proxy rotation                                         |
-| `timeout`      | Union[int, float]         | Override default timeout                                                |
-| `verify_ssl`   | Union[bool, str]          | Override SSL verification (True/False or path to .crt)                  |
-| `use_cache`    | bool                      | Override cache usage setting                                            |
-| `cookies`      | Dict[str, str]            | Cookies for request (merges with default)                               |
-| `random_delay` | Optional[Tuple[int, int]] | Random delay (min, max) in seconds after successful non-cached requests |
+| Parameter            | Type                            | Description                                                                        |
+| -------------------- | ------------------------------- | ---------------------------------------------------------------------------------- |
+| `headers`            | Dict[str, str]                  | Custom request headers                                                             |
+| `retry_count`        | int                             | Override default retry count                                                       |
+| `proxy`              | Dict[str, str]                  | Override default proxy rotation                                                    |
+| `timeout`            | Union[int, float]               | Override default timeout                                                           |
+| `verify_ssl`         | Union[bool, str]                | Override SSL verification (True/False or path to .crt)                             |
+| `use_cache`          | bool                            | Override cache usage setting                                                       |
+| `cookies`            | Dict[str, str]                  | Cookies for request (merges with default)                                          |
+| `random_delay`       | Optional[Tuple[int, int]]       | Random delay (min, max) in seconds after successful non-cached requests            |
+| `response_validator` | Optional[Callable[[str], bool]] | Function to validate response text; returns True if valid, triggers retry if False |
 
 Additional for `post()`:
 | Parameter | Type | Description |
