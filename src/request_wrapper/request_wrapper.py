@@ -371,6 +371,7 @@ class RequestWrapper:
         use_cache: Optional[bool] = None,
         cookies: Optional[Dict[str, str]] = None,
         random_delay: Optional[Tuple[int, int]] = None,
+        response_validator: Optional[Callable[[str], bool]] = None,
     ) -> requests.Response:
         """
         Make a single HTTP request with all the configured options.
@@ -388,6 +389,7 @@ class RequestWrapper:
             use_cache: Whether to use cache for this request
             cookies: Cookies for this request
             random_delay: Tuple of (min, max) seconds to delay after successful non-cached requests
+            response_validator: Optional function that takes response text and returns True if valid
 
         Returns:
             Response object
@@ -424,13 +426,53 @@ class RequestWrapper:
         if use_cache and method.upper() in ["GET", "HEAD"]:
             path_str = []
             cached_response = self.cache.get(
-                method, url, headers, body_bytes, params, cache_hit_path=path_str)
+                method, url, headers, body_bytes, params, cache_hit_path=path_str
+            )
             if cached_response:
-                cache_hit = True
-                self.logger.debug(f"Cache hit for {method} {url}")
-                if len(path_str) > 0:
-                    self.logger.info(f"{url} - cache hit -> {path_str[0]}")
-                return cached_response
+                # Validate cached response if validator is provided
+                if response_validator is not None:
+                    try:
+                        is_valid = response_validator(cached_response.text)
+                        if not is_valid:
+                            self.logger.warning(
+                                f"Cached response validation failed for {method} {url}, deleting cache"
+                            )
+                            # Delete invalid cache and proceed to make fresh request
+                            self.cache.delete(
+                                method=method,
+                                url=url,
+                                headers=headers,
+                                body=body_bytes,
+                                params=params,
+                            )
+                        else:
+                            # Cache is valid, return it
+                            cache_hit = True
+                            self.logger.debug(
+                                f"Cache hit for {method} {url} (validated)")
+                            if len(path_str) > 0:
+                                self.logger.info(
+                                    f"{url} - cache hit -> {path_str[0]}")
+                            return cached_response
+                    except Exception as e:
+                        self.logger.error(
+                            f"Response validator function raised exception on cached response: {type(e).__name__}: {e}"
+                        )
+                        # Delete potentially corrupted cache
+                        self.cache.delete(
+                            method=method,
+                            url=url,
+                            headers=headers,
+                            body=body_bytes,
+                            params=params,
+                        )
+                else:
+                    # No validator, return cached response
+                    cache_hit = True
+                    self.logger.debug(f"Cache hit for {method} {url}")
+                    if len(path_str) > 0:
+                        self.logger.info(f"{url} - cache hit -> {path_str[0]}")
+                    return cached_response
 
         self.logger.debug(
             f"Making {method} request to {url} (cache: {'enabled' if use_cache else 'disabled'})")
