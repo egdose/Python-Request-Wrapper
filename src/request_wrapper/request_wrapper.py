@@ -527,7 +527,7 @@ class RequestWrapper:
         last_exception = None
 
         self.logger.info(
-            f"Starting {method} request to {url} (max_retries={retry_count})")
+            f"Starting {method} request to {url} (max_retries={retry_count}){f' {params}' if params else ''}")
 
         for attempt in range(retry_count + 1):
             try:
