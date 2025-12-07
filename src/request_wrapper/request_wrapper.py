@@ -650,7 +650,8 @@ class RequestWrapper:
         # All retries exhausted
         self.logger.error(f"All retries exhausted for {method} {url} "
                           f"(last_status={last_response.status_code if last_response else 'None'}, "
-                          f"last_error={type(last_exception).__name__ if last_exception else 'None'})")
+                          f"last_error={type(last_exception).__name__ if last_exception else 'None'})"
+                          f" {params}" if params else "")
         raise MaxRetriesExceededError(
             url=url,
             max_retries=retry_count,
